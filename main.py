@@ -9,7 +9,7 @@ from models.model import Regression_Model
 path = "./data/train.csv"
 
 x, y = processing(path)
-
+print(x.head())
 batch_size = 1000
 learning_rate= 0.01
 

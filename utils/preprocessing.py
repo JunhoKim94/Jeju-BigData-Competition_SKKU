@@ -28,13 +28,19 @@ def processing(path = "./data/train.csv"):
     bus route(2), station code(3), in_out(시내, 시외)(4), 시간(8~19) /// target(20) --> 18~20 ride_on
     """
     train_data = pd.read_csv(path)
-
+    #print(train_data.head())
     train = train_data.iloc[:, 2:5]
-    train = pd.concat([train, train_data.iloc[:, 8:20]])
+    train = pd.concat([train, train_data.iloc[:, 8:20]], axis = 1)
     y = train_data.iloc[:,20]
+
+    #print(train.head(), y.head())
 
     #시외 = 1, 시내 = 0
     train.loc[:,"in_out"][train.loc[:, "in_out"] == "시외"] = 1
     train.loc[:,"in_out"][train.loc[:, "in_out"] == "시내"] = 0
 
     return train, y
+
+if __name__ == "__main__":
+    x, y = processing()
+    print(x,y)
