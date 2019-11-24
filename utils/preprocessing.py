@@ -23,24 +23,48 @@ cumprod 맨 첫번째 성분부터 각 성분까지의 누적곱을 계산 (1에
 #iloc과 loc 사용해서 추출
 #iloc --> 인덱스로 접근 가능 loc --> 키워드 접근도 가능
 
-def processing(path = "./data/train.csv"):
-    """
-    bus route(2), station code(3), in_out(시내, 시외)(4), 시간(8~19) /// target(20) --> 18~20 ride_on
-    """
-    train_data = pd.read_csv(path)
-    #print(train_data.head())
-    train = train_data.iloc[:, 2:5]
-    train = pd.concat([train, train_data.iloc[:, 8:20]], axis = 1)
-    y = train_data.iloc[:,20]
+def processing(path = "./data/train.csv", training = True, date_change = True, input_var = ['in_out','latitude','longitude','6~7_ride', '7~8_ride', '8~9_ride', '9~10_ride',
+       '10~11_ride', '11~12_ride', '6~7_takeoff', '7~8_takeoff', '8~9_takeoff',
+       '9~10_takeoff', '10~11_takeoff', '11~12_takeoff','weekday_0', 'weekday_1', 'weekday_2', 'weekday_3', 'weekday_4',
+       'weekday_5', 'weekday_6', 'dis_jejusi', 'dis_seoquipo']):
 
-    #print(train.head(), y.head())
+    data = pd.read_csv(path)
+
+    #Data 변수 변환
+    if date_change:
+        data["date"] = pd.to_datetime(data["date"])
+        data["weekday"] = data["date"].dt.weekday
+        
+        data = pd.get_dummies(data, columns = ["weekday"])
 
     #시외 = 1, 시내 = 0
-    train.loc[:,"in_out"][train.loc[:, "in_out"] == "시외"] = 1
-    train.loc[:,"in_out"][train.loc[:, "in_out"] == "시내"] = 0
+    data.loc[:,"in_out"][data.loc[:, "in_out"] == "시외"] = 1
+    data.loc[:,"in_out"][data.loc[:, "in_out"] == "시내"] = 0
 
-    return train, y
+    coords_jejusi = (33.500770, 126.522761) #제주시의 위도 경도
+    coords_seoquipo = (33.259429, 126.558217) #서귀포시의 위도 경도
+
+    data["dis_jejusi"] = (((data["latitude"] - coords_jejusi[0]) * 110000)**2 + ((data["longitude"] - coords_jejusi[1])* 88800)**2)**0.5
+    data["dis_seoquipo"] = (((data["latitude"] - coords_seoquipo[0]) * 110000)**2 + ((data["longitude"] - coords_seoquipo[1])* 88800)**2)**0.5
+
+    data["dis_jejusi"] /= 1000
+    data["dis_seoquipo"] /= 1000
+
+    train = data[input_var]
+    if training:
+        y = data["18~20_ride"]
+        return train, y
+
+    return train
+
+def validation(data, model):
+
+    val_data = data
+
 
 if __name__ == "__main__":
     x, y = processing()
     print(x,y)
+
+
+

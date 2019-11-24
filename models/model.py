@@ -4,9 +4,9 @@ import torch.nn.functional as F
 
 class Regression_Model(nn.Module):
 
-    def __init__(self):
+    def __init__(self, inputs):
         super(Regression_Model, self).__init__()
-        self.inputs = 15
+        self.inputs = inputs
 
         self.linear = nn.Sequential(
             nn.Linear(self.inputs,10),
