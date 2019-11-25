@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 from torch import nn,tensor
+from sklearn.preprocessing import StandardScaler,RobustScaler,MinMaxScaler,MaxAbsScaler
+
 
 """
 pandas에서 DataFrame에 적용되는 함수들
@@ -23,10 +25,15 @@ cumprod 맨 첫번째 성분부터 각 성분까지의 누적곱을 계산 (1에
 #iloc과 loc 사용해서 추출
 #iloc --> 인덱스로 접근 가능 loc --> 키워드 접근도 가능
 
-def processing(path = "./data/train.csv", training = True, date_change = True, input_var = ['in_out','latitude','longitude','6~7_ride', '7~8_ride', '8~9_ride', '9~10_ride',
+def processing(path = "./data/train.csv", training = True, date_change = True, sort = "min_max",  input_var = ['in_out','latitude','longitude','6~7_ride', '7~8_ride', '8~9_ride', '9~10_ride',
        '10~11_ride', '11~12_ride', '6~7_takeoff', '7~8_takeoff', '8~9_takeoff',
        '9~10_takeoff', '10~11_takeoff', '11~12_takeoff','weekday_0', 'weekday_1', 'weekday_2', 'weekday_3', 'weekday_4',
        'weekday_5', 'weekday_6', 'dis_jejusi', 'dis_seoquipo']):
+
+    '''
+    id,date,bus_route_id,in_out,station_code,station_name,latitude,longitude,6~7_ride,7~8_ride,8~9_ride,9~10_ride,10~11_ride,11~12_ride,6~7_takeoff,7~8_takeoff,8~9_takeoff,9~10_takeoff,10~11_takeoff,11~12_takeoff
+    '''
+
 
     data = pd.read_csv(path)
 
@@ -38,29 +45,80 @@ def processing(path = "./data/train.csv", training = True, date_change = True, i
         data = pd.get_dummies(data, columns = ["weekday"])
 
     #시외 = 1, 시내 = 0
-    data.loc[:,"in_out"][data.loc[:, "in_out"] == "시외"] = 1
-    data.loc[:,"in_out"][data.loc[:, "in_out"] == "시내"] = 0
+    if "in_out" in input_var:
+        data.loc[:,"in_out"][data.loc[:, "in_out"] == "시외"] = 1
+        data.loc[:,"in_out"][data.loc[:, "in_out"] == "시내"] = 0
 
-    coords_jejusi = (33.500770, 126.522761) #제주시의 위도 경도
-    coords_seoquipo = (33.259429, 126.558217) #서귀포시의 위도 경도
+    if "dis_jejusi" in input_var:
+        coords_jejusi = (33.500770, 126.522761) #제주시의 위도 경도
+        data["dis_jejusi"] = (((data["latitude"] - coords_jejusi[0]) * 110000)**2 + ((data["longitude"] - coords_jejusi[1])* 88800)**2)**0.5
+        data["dis_jejusi"] /= 1000
+        
+        data["dis_jejusi"] = scaler(data["dis_jejusi"], sort = sort)
 
-    data["dis_jejusi"] = (((data["latitude"] - coords_jejusi[0]) * 110000)**2 + ((data["longitude"] - coords_jejusi[1])* 88800)**2)**0.5
-    data["dis_seoquipo"] = (((data["latitude"] - coords_seoquipo[0]) * 110000)**2 + ((data["longitude"] - coords_seoquipo[1])* 88800)**2)**0.5
+    if "dis_seoquipo" in input_var:
+        coords_seoquipo = (33.259429, 126.558217) #서귀포시의 위도 경도
+        data["dis_seoquipo"] = (((data["latitude"] - coords_seoquipo[0]) * 110000)**2 + ((data["longitude"] - coords_seoquipo[1])* 88800)**2)**0.5
+        data["dis_seoquipo"] /= 1000
 
-    data["dis_jejusi"] /= 1000
-    data["dis_seoquipo"] /= 1000
+        data["dis_seoquipo"] = scaler(data["dis_seoquipo"], sort = sort)
 
     train = data[input_var]
+
+    if "bus_route_id" in input_var:
+
+        train = pd.get_dummies(train,columns=['bus_route_id'])
+        
+        #del train["bus_route_id"]
+    
+    if "station_code" in input_var:
+
+        train = pd.get_dummies(train, columns = ["station_code"])
+
+        #del train["station_code"]
+
+    
     if training:
+
         y = data["18~20_ride"]
+
         return train, y
 
     return train
 
-def validation(data, model):
+def scaler(data, sort = "min_max"):
+    '''
+    Data Scaler
+    inputs
+    sort: min_max, robust, standard, max_obs
+    data: 1D array or 2D array
+    output
+    scaled data(2D)
+    '''
+    if len(data.shape) == 1:
+        data = data.reshape(-1,1)
+    
+    if sort.lower() == "min_max":
+        scaler = MinMaxScaler()
+        scaler.fit(data)
+        data = scaler.transform(data)
 
-    val_data = data
+    elif sort.lower() == "robust":
+        scaler = RobustScaler()
+        scaler.fit(data)
+        data = scaler.transform(data)
 
+    elif sort.lower() == "standard":
+        scaler = StandardScaler()
+        scaler.fit(data)
+        data = scaler.transform(data)
+
+    elif sort.lower() == "max_abs":
+        scaler = MaxAbsScaler()
+        scaler.fit(data)
+        data = scaler.transform(data)
+
+    return data
 
 if __name__ == "__main__":
     x, y = processing()
